@@ -30,23 +30,24 @@ jobs:
         run: npx playwright test tests --project=chromium --reporter=json > results.json
 
       - name: Extract test results (file + title + status)
-        id: extract
-        run: |
-          node -e "const fs=require('fs');
-          const data=JSON.parse(fs.readFileSync('results.json','utf8'));
-          const tests = [];
-          for (const suite of data.suites) {
-            for (const spec of suite.specs) {
-              for (const t of spec.tests) {
-                tests.push({
-                  file: suite.file,
-                  title: spec.title,
-                  status: t.results[0].status
-                });
-              }
-            }
-          }
-          fs.writeFileSync('summary.json', JSON.stringify(tests, null, 2));"
+       id: extract
+       run: |
+       node -e "const fs=require('fs');
+       const data=JSON.parse(fs.readFileSync('results.json','utf8'));
+       const testMap = {};
+       for (const suite of data.suites) {
+       for (const spec of suite.specs) {
+       for (const t of spec.tests) {
+       const key = spec.title;
+       testMap[key] = {
+       file: suite.file,
+       title: spec.title,
+       status: t.results[0].status
+          };
+        }
+      }
+    }
+    fs.writeFileSync('summary.json', JSON.stringify({ testMap }, null, 2));"
 
       - name: Upload summary.json (optional debug)
         uses: actions/upload-artifact@v4
