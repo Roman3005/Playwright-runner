@@ -26,11 +26,31 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
+      # Chạy Playwright với 2 reporter: HTML + JSON
       - name: Run Playwright tests
-        run: npx playwright test --reporter=html
+        run: |
+          npx playwright test tests --project=chromium \
+            --reporter=html,json \
+            --output=playwright-report > results.json
 
-      - name: Upload Test Report
+      # Upload HTML report để xem trực tiếp trên GitHub
+      - name: Upload HTML Report
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-html-report
           path: playwright-report/
+
+      # Upload JSON report (raw) để debug nếu cần
+      - name: Upload JSON Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-json-report
+          path: results.json
+
+      # Gửi JSON kết quả sang n8n webhook
+      - name: Send results to n8n
+        run: |
+          curl -X POST -H "Content-Type: application/json" \
+          -d @results.json \
+          ${{ secrets.N8N_WEBHOOK_URL }}
+
