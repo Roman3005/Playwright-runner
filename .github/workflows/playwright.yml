@@ -5,7 +5,7 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-  workflow_dispatch: # cho phép chạy thủ công
+  workflow_dispatch: # chạy thủ công nếu cần
 
 jobs:
   test:
@@ -21,36 +21,29 @@ jobs:
           node-version: 18
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
-      # Chạy Playwright với 2 reporter: HTML + JSON
-      - name: Run Playwright tests
-        run: |
-          npx playwright test tests --project=chromium \
-            --reporter=html,json \
-            --output=playwright-report > results.json
+      - name: Run Playwright tests (chromium only, folder tests) and write JSON
+        # ghi output JSON vào results.json
+        run: npx playwright test tests --project=chromium --reporter=json > results.json
 
-      # Upload HTML report để xem trực tiếp trên GitHub
-      - name: Upload HTML Report
+      - name: Upload JSON report (optional, for debug)
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-html-report
-          path: playwright-report/
-
-      # Upload JSON report (raw) để debug nếu cần
-      - name: Upload JSON Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-json-report
+          name: playwright-json
           path: results.json
 
-      # Gửi JSON kết quả sang n8n webhook
-      - name: Send results to n8n
+      - name: Send results to n8n webhook
+        env:
+          N8N_WEBHOOK_URL: ${{ secrets.N8N_WEBHOOK_URL }}
+          N8N_INCOMING_SECRET: ${{ secrets.N8N_INCOMING_SECRET }}
         run: |
-          curl -X POST -H "Content-Type: application/json" \
-          -d @results.json \
-          ${{ secrets.N8N_WEBHOOK_URL }}
-
+          # gửi results.json thẳng tới webhook, kèm header bí mật để n8n xác thực
+          curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -H "X-Run-Secret: $N8N_INCOMING_SECRET" \
+            --data-binary @results.json \
+            "$N8N_WEBHOOK_URL"
