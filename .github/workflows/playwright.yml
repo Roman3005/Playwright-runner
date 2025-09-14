@@ -26,37 +26,27 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
-      - name: Run Playwright tests (chromium only, folder tests) and write JSON
+      - name: Run Playwright tests and write JSON
         run: npx playwright test tests --project=chromium --reporter=json > results.json
 
       - name: Extract test results (file + title + status)
+        id: extract
         run: |
-          node <<'EOF'
-          const fs = require('fs');
-          const results = JSON.parse(fs.readFileSync('results.json', 'utf-8'));
-          const summary = [];
-
-          if (results.suites) {
-            const walk = (suites) => {
-              for (const suite of suites) {
-                if (suite.suites) walk(suite.suites);
-                if (suite.specs) {
-                  for (const spec of suite.specs) {
-                    summary.push({
-                      file: suite.file,
-                      title: spec.title,
-                      outcome: spec.tests[0]?.results[0]?.status || "unknown"
-                    });
-                  }
-                }
+          node -e "const fs=require('fs');
+          const data=JSON.parse(fs.readFileSync('results.json','utf8'));
+          const tests = [];
+          for (const suite of data.suites) {
+            for (const spec of suite.specs) {
+              for (const t of spec.tests) {
+                tests.push({
+                  file: suite.file,
+                  title: spec.title,
+                  status: t.results[0].status
+                });
               }
-            };
-            walk(results.suites);
+            }
           }
-
-          fs.writeFileSync('summary.json', JSON.stringify(summary, null, 2));
-          console.log("Extracted summary.json:", summary);
-          EOF
+          fs.writeFileSync('summary.json', JSON.stringify(tests, null, 2));"
 
       - name: Upload summary.json (optional debug)
         uses: actions/upload-artifact@v4
