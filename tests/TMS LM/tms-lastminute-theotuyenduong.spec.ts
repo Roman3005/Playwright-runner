@@ -32,7 +32,7 @@ test('test', async ({ page }) => {
 
   const today = new Date();
   const endDate = new Date();
-  endDate.setDate(today.getDate() + 30);
+  endDate.setDate(today.getDate() + 1);
   const startDay = today.getDate().toString();
   const endDay = endDate.getDate().toString();
   const currentMonth = today.getMonth(); // 0 = Jan
